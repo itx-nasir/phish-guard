@@ -138,21 +138,13 @@ PhishGuard now includes real-time threat intelligence via VirusTotal API:
 
 ## 🚀 Planned Features
 
-### 🔥 High Priority
 - **Email Chain Analysis** - Analyze forwarding patterns and email threads
 - **Custom Rules Engine** - User-defined detection rules and scoring
-
-### 🌟 Medium Priority
 - **API Integration Suite** - REST API with webhook notifications
 - **Advanced Reporting** - PDF report generation and email alerts
 - **Machine Learning Enhancement** - ML models for pattern recognition
 - **Real-time Dashboard Updates** - WebSocket integration for live data
-
-### 💡 Nice-to-Have
-- **Browser Extension** - Real-time analysis for Gmail/Outlook
-- **Mobile Application** - iOS/Android app with push notifications
-- **Team Collaboration** - Multi-user support with role-based access
-- **SIEM Integration** - Microsoft 365, Google Workspace, and security platform plugins
+- **Email Notifications** - Automated email alerts for analysis results, threat detections, and security findings
 
 ## 🔧 Troubleshooting
 
