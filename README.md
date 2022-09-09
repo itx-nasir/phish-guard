@@ -326,4 +326,4 @@ This project is licensed under the MIT License.
 - **Automated setup script** with health checks
 - **Celery Beat scheduler** for periodic tasks
 - **Redis persistence** configuration
-- **Comprehensive documentation** and troubleshooting guide 
+- **Comprehensive documentation** and troubleshooting guide
