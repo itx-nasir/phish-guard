@@ -18,16 +18,14 @@ import {
   Typography,
 } from '@mui/material';
 import {
-  CheckCircle,
   Error,
-  Warning,
   Link as LinkIcon,
   AttachFile,
   Security,
 } from '@mui/icons-material';
 import axios from 'axios';
 
-interface AnalysisResult {
+interface AnalysisData {
   status: string;
   result?: {
     threat_score: number;
@@ -58,25 +56,40 @@ interface AnalysisResult {
 const AnalysisResult: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let isMounted = true;
+
     const fetchResult = async () => {
       try {
         const response = await axios.get(`/api/analysis/${taskId}`);
+        
+        if (!isMounted) return; // Component unmounted, don't update state
+        
         setResult(response.data);
 
         // Poll for results if still processing
         if (response.data.status === 'processing') {
-          setTimeout(() => fetchResult(), 2000);
+          timeoutId = setTimeout(() => fetchResult(), 2000);
         }
       } catch (err: any) {
+        if (!isMounted) return; // Component unmounted, don't update state
         setError(err.response?.data?.error || 'Failed to fetch analysis results');
       }
     };
 
     fetchResult();
+
+    // Cleanup function to prevent memory leaks
+    return () => {
+      isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [taskId]);
 
   const getRiskColor = (riskLevel: string) => {
