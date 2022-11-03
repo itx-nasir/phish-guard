@@ -10,7 +10,6 @@ services:
       - "3000:3000"
     environment:
       - REACT_APP_API_URL=http://localhost:5000
-      - WATCHPACK_POLLING=true
     depends_on:
       - backend
 
@@ -21,15 +20,14 @@ services:
     command: ["flask", "run", "--host=0.0.0.0", "--port=5000"]
     volumes:
       - ./backend:/app
+      - uploads_data:/app/uploads
     ports:
       - "5000:5000"
     environment:
       - FLASK_APP=app.py
-      - FLASK_ENV=development
       - FLASK_DEBUG=1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - REDIS_URL=redis://redis:6379/1
     depends_on:
       - redis
 
@@ -40,6 +38,7 @@ services:
     command: celery -A app.celery worker --loglevel=info
     volumes:
       - ./backend:/app
+      - uploads_data:/app/uploads
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -48,13 +47,9 @@ services:
       - backend
 
   redis:
-    image: redis/redis-stack:latest
+    image: redis:alpine
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
-    environment:
-      - REDIS_ARGS=--save 20 1
 
 volumes:
-  redis_data:
+  uploads_data:
