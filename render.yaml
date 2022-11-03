@@ -1,0 +1,62 @@
+services:
+  # Frontend Static Site
+  - type: web
+    name: phish-guard-frontend
+    env: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./frontend/build
+    rootDir: ./frontend
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://phish-guard-backend.onrender.com
+
+  # Backend Web Service
+  - type: web
+    name: phish-guard-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 app:app
+    rootDir: ./backend
+    envVars:
+      - key: FLASK_DEBUG
+        value: "0"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: phish-guard-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: phish-guard-redis
+          property: connectionString
+      - key: CORS_ORIGINS
+        value: https://phish-guard-frontend.onrender.com
+
+  # Celery Worker
+  - type: worker
+    name: phish-guard-worker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A app.celery worker --loglevel=info --concurrency=1
+    rootDir: ./backend
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: phish-guard-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: phish-guard-redis
+          property: connectionString
+
+  # Redis Database
+  - type: redis
+    name: phish-guard-redis
+    plan: starter 
