@@ -18,42 +18,17 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
-
-# Initialize configuration
 Config.init_app(app)
 
 # Enable CORS
 CORS(app, origins=app.config['CORS_ORIGINS'])
 
 # Initialize Celery
-def make_celery(app):
-    # Use backward compatible configuration keys
-    celery = Celery(
-        app.import_name,
-        backend=app.config.get('CELERY_RESULT_BACKEND', app.config.get('result_backend')),
-        broker=app.config.get('CELERY_BROKER_URL', app.config.get('broker_url'))
-    )
-    
-    # Update configuration using new format with fallbacks
-    celery.conf.update(
-        task_serializer=app.config.get('CELERY_TASK_SERIALIZER', app.config.get('task_serializer', 'json')),
-        result_serializer=app.config.get('CELERY_RESULT_SERIALIZER', app.config.get('result_serializer', 'json')),
-        accept_content=app.config.get('CELERY_ACCEPT_CONTENT', app.config.get('accept_content', ['json'])),
-        result_expires=app.config.get('CELERY_TASK_RESULT_EXPIRES', app.config.get('result_expires')),
-        timezone=app.config.get('timezone', 'UTC'),
-        enable_utc=app.config.get('enable_utc', True),
-    )
-
-    class ContextTask(celery.Task):
-        """Make celery tasks work with Flask app context."""
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return self.run(*args, **kwargs)
-
-    celery.Task = ContextTask
-    return celery
-
-celery = make_celery(app)
+celery = Celery(
+    app.import_name,
+    broker=app.config['CELERY_BROKER_URL'],
+    backend=app.config['CELERY_RESULT_BACKEND']
+)
 
 # Celery tasks
 @celery.task(bind=True)
@@ -95,7 +70,6 @@ def analyze_email_content():
         if not data or 'content' not in data:
             return jsonify({'error': 'No email content provided'}), 400
 
-        # Validate email content (basic check)
         email_content = data['content']
         if not email_content.strip():
             return jsonify({'error': 'Empty email content'}), 400
@@ -128,17 +102,15 @@ def analyze_email_file():
         if not file.filename.lower().endswith('.eml'):
             return jsonify({'error': 'Invalid file format. Please upload .eml files only'}), 400
 
-        # Check file size (16MB limit)
+        # Check file size
         if request.content_length > app.config['MAX_CONTENT_LENGTH']:
             return jsonify({'error': 'File too large. Maximum size is 16MB'}), 413
 
-        # Save file temporarily
-        import tempfile
+        # Save file temporarily to shared volume
         import uuid
         
         filename = f"{uuid.uuid4()}.eml"
-        temp_dir = tempfile.gettempdir()
-        file_path = os.path.join(temp_dir, filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
         # Create analysis task
@@ -163,7 +135,6 @@ def get_analysis_result(task_id):
         if task.state == 'PENDING':
             response = {
                 'status': 'processing',
-                'progress': 0,
                 'message': 'Task is waiting to be processed'
             }
         elif task.state == 'SUCCESS':
@@ -178,16 +149,9 @@ def get_analysis_result(task_id):
                 'error': str(task.result),
                 'message': 'Analysis failed'
             }
-        elif task.state == 'RETRY':
-            response = {
-                'status': 'retrying',
-                'progress': 25,
-                'message': 'Task is being retried'
-            }
         else:
             response = {
                 'status': task.state.lower(),
-                'progress': 50,
                 'message': f'Task state: {task.state}'
             }
         
@@ -210,4 +174,5 @@ def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=app.config['DEBUG'], host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=app.config['DEBUG'], host='0.0.0.0', port=port)
