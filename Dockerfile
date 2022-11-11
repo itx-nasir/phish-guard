@@ -7,8 +7,8 @@ WORKDIR /app/frontend
 # Copy package files
 COPY frontend/package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies (suppress deprecation warnings)
+RUN npm install --silent --no-fund --no-audit
 
 # Copy frontend source code
 COPY frontend/ ./
