@@ -1,80 +1,57 @@
-# Multi-stage build for React + Flask app
+# Multi-stage build for React frontend and Flask backend
+
 # Stage 1: Build React frontend
-FROM node:18-slim AS frontend-build
-
+FROM node:18-alpine AS frontend-build
 WORKDIR /app/frontend
-
-# Copy package files
 COPY frontend/package*.json ./
-
-# Install dependencies (suppress deprecation warnings)
 RUN npm install --silent --no-fund --no-audit
-
-# Copy frontend source code
 COPY frontend/ ./
 
-# Build the React app
+# Build the frontend for production
 RUN npm run build
 
-# Stage 2: Build Flask backend
-FROM python:3.11-slim AS backend-build
+# Stage 2: Setup Python backend
+FROM python:3.11-slim AS backend
 
-WORKDIR /app/backend
-
-# Install system dependencies for Python
+# Install system dependencies for Flask and curl for healthcheck
 RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
     libmagic1 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy backend requirements
-COPY backend/requirements.txt ./
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt gunicorn
-
-# Copy backend source code
-COPY backend/ ./
-
-# Stage 3: Final production image with nginx + Flask
-FROM nginx:alpine AS production
-
-# Install Python and system dependencies
-RUN apk add --no-cache \
-    python3 \
-    py3-pip \
-    libmagic \
-    && rm -rf /var/cache/apk/*
-
-# Create app directory
 WORKDIR /app
 
-# Copy built React app from frontend-build stage
-COPY --from=frontend-build /app/frontend/build /usr/share/nginx/html
+# Copy Python requirements and install dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
-# Copy Flask backend from backend-build stage
-COPY --from=backend-build /app/backend /app/backend
+# Copy backend application
+COPY backend/ ./backend/
 
-# Install Python dependencies in the final image
-COPY backend/requirements.txt /app/backend/
-RUN pip3 install --no-cache-dir -r /app/backend/requirements.txt gunicorn
+# Copy built frontend from previous stage
+COPY --from=frontend-build /app/frontend/build ./frontend/build
 
-# Copy nginx configuration
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Create uploads directory
+RUN mkdir -p /app/uploads && chmod 755 /app/uploads
 
-# Create startup script
-RUN echo '#!/bin/sh' > /start.sh && \
-    echo 'cd /app/backend' >> /start.sh && \
-    echo 'gunicorn --bind 127.0.0.1:5000 --workers 2 --timeout 120 app:app &' >> /start.sh && \
-    echo 'nginx -g "daemon off;"' >> /start.sh && \
-    chmod +x /start.sh
+# Expose port
+EXPOSE 5000
 
 # Set environment variables
-ENV FLASK_APP=app.py
-ENV FLASK_ENV=production
+ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
+ENV FLASK_ENV=production
+ENV NODE_ENV=production
 
-# Expose port 80 for nginx
-EXPOSE 80
+# Create startup script
+RUN echo '#!/bin/bash\ncd /app/backend && gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 120 app:app' > /app/start.sh
+RUN chmod +x /app/start.sh
 
-# Start both Flask and nginx
-CMD ["/start.sh"] 
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/api/test || exit 1
+
+# Start the application
+CMD ["/app/start.sh"] 
