@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 from celery import Celery
 from dotenv import load_dotenv
@@ -15,8 +15,9 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app
-app = Flask(__name__)
+# Initialize Flask app with static file serving
+static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'frontend', 'build')
+app = Flask(__name__, static_folder=static_folder, static_url_path='')
 app.config.from_object(Config)
 Config.init_app(app)
 
@@ -61,6 +62,20 @@ def analyze_file_task(self, file_path):
 def health_check():
     """Health check endpoint"""
     return jsonify({'status': 'healthy', 'version': '1.0.0'}), 200
+
+@app.route('/api/test', methods=['GET'])
+def test_endpoint():
+    """Test endpoint for health check"""
+    return jsonify({'status': 'ok', 'message': 'API is working'}), 200
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    """Serve React frontend"""
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/api/analyze/content', methods=['POST'])
 def analyze_email_content():
