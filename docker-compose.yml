@@ -1,0 +1,39 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      # Simple volume mounting - only mount backend for live reload
+      - ${PWD}/backend:/app/backend:${MOUNT_TYPE:-rw}
+      - uploads_data:/app/uploads
+    environment:
+      - MODE=${MODE:-production}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  celery_worker:
+    build: .
+    working_dir: /app/backend
+    volumes:
+      - ${PWD}/backend:/app/backend:${MOUNT_TYPE:-rw}
+      - uploads_data:/app/uploads
+    environment:
+      - MODE=${MODE:-production}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    command: ["celery", "-A", "app.celery", "worker", "--loglevel=info"]
+    depends_on:
+      - redis
+      - app
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+
+volumes:
+  uploads_data: 
