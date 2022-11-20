@@ -1,53 +1,57 @@
-# Multi-stage build for React frontend and Flask backend
-
-# Stage 1: Build React frontend
+# Unified Dockerfile for both development and production
 FROM node:18-alpine AS frontend-build
+
 WORKDIR /app/frontend
+
+# Copy package files first for better caching
 COPY frontend/package*.json ./
 RUN npm install --silent --no-fund --no-audit
-COPY frontend/ ./
 
-# Build the frontend for production
+# Copy source files and build
+COPY frontend/src ./src
+COPY frontend/public ./public
 RUN npm run build
 
-# Stage 2: Setup Python backend
-FROM python:3.11-slim AS backend
+# Main stage - Python with Flask
+FROM python:3.11-slim
 
-# Install system dependencies for Flask and curl for healthcheck
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
     libmagic1 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy Python requirements and install dependencies
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt gunicorn
+# Copy requirements and install Python dependencies
+COPY backend/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend application
+# Copy backend code
 COPY backend/ ./backend/
 
-# Copy built frontend from previous stage
+# Copy built frontend
 COPY --from=frontend-build /app/frontend/build ./frontend/build
 
 # Create uploads directory
 RUN mkdir -p /app/uploads && chmod 755 /app/uploads
 
-# Expose port
-EXPOSE 5000
-
 # Set environment variables
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
-ENV FLASK_ENV=production
-ENV NODE_ENV=production
 
-# Create startup script
-RUN echo '#!/bin/bash\ncd /app/backend && gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 120 app:app' > /app/start.sh
-RUN chmod +x /app/start.sh
+# Create unified startup script
+RUN echo '#!/bin/bash\n\
+if [ "$MODE" = "development" ]; then\n\
+  echo "Starting in DEVELOPMENT mode..."\n\
+  cd /app/backend && python app.py\n\
+else\n\
+  echo "Starting in PRODUCTION mode..."\n\
+  cd /app/backend && python app.py\n\
+fi' > /app/start.sh && chmod +x /app/start.sh
+
+# Expose port
+EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
