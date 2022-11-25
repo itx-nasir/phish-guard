@@ -15,7 +15,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app with static file serving
+# Initialize Flask app with static file serving (both dev and prod)
 static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'frontend', 'build')
 app = Flask(__name__, static_folder=static_folder, static_url_path='')
 app.config.from_object(Config)
@@ -24,9 +24,9 @@ Config.init_app(app)
 # Enable CORS
 CORS(app, origins=app.config['CORS_ORIGINS'])
 
-# Initialize Celery
+# Initialize Celery - simple approach
 celery = Celery(
-    app.import_name,
+    'app',  # Simple name
     broker=app.config['CELERY_BROKER_URL'],
     backend=app.config['CELERY_RESULT_BACKEND']
 )
@@ -71,11 +71,29 @@ def test_endpoint():
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_frontend(path):
-    """Serve React frontend"""
-    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
-        return send_from_directory(app.static_folder, path)
+    """Serve React frontend (both dev and prod)"""
+    if app.static_folder and os.path.exists(app.static_folder):
+        index_path = os.path.join(app.static_folder, 'index.html')
+        
+        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+        elif os.path.exists(index_path):
+            return send_from_directory(app.static_folder, 'index.html')
+        else:
+            return jsonify({
+                'error': 'Frontend build incomplete',
+                'message': 'React build directory exists but index.html is missing.',
+                'static_folder': app.static_folder,
+                'mode': os.environ.get('MODE', 'production')
+            }), 404
     else:
-        return send_from_directory(app.static_folder, 'index.html')
+        return jsonify({
+            'error': 'Frontend not built',
+            'message': 'React build files not found. Try rebuilding the container.',
+            'static_folder': app.static_folder,
+            'mode': os.environ.get('MODE', 'production'),
+            'hint': 'Run: docker-compose up --build'
+        }), 404
 
 @app.route('/api/analyze/content', methods=['POST'])
 def analyze_email_content():
@@ -90,7 +108,17 @@ def analyze_email_content():
             return jsonify({'error': 'Empty email content'}), 400
 
         # Create analysis task
-        task = analyze_content_task.delay(email_content)
+        if os.environ.get('MODE') == 'production' and 'onrender.com' in os.environ.get('RENDER_EXTERNAL_URL', ''):
+            # Run synchronously on Render (no background workers)
+            result = EmailAnalyzer.analyze_content(email_content)
+            return jsonify({
+                'status': 'completed',
+                'result': result,
+                'message': 'Analysis completed successfully'
+            }), 200
+        else:
+            # Use Celery for local development
+            task = analyze_content_task.delay(email_content)
         
         return jsonify({
             'task_id': task.id,
@@ -129,7 +157,27 @@ def analyze_email_file():
         file.save(file_path)
 
         # Create analysis task
-        task = analyze_file_task.delay(file_path)
+        if os.environ.get('MODE') == 'production' and 'onrender.com' in os.environ.get('RENDER_EXTERNAL_URL', ''):
+            # Run synchronously on Render (no background workers)
+            try:
+                result = EmailAnalyzer.analyze_file(file_path)
+                # Clean up file
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                return jsonify({
+                    'status': 'completed',
+                    'result': result,
+                    'message': 'Analysis completed successfully'
+                }), 200
+            except Exception as e:
+                # Clean up on error
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                logger.error(f"Error in file analysis: {str(e)}")
+                return jsonify({'error': 'Analysis failed'}), 500
+        else:
+            # Use Celery for local development
+            task = analyze_file_task.delay(file_path)
 
         return jsonify({
             'task_id': task.id,
@@ -190,4 +238,11 @@ def internal_error(error):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=app.config['DEBUG'], host='0.0.0.0', port=port)
+    mode = os.environ.get('MODE', 'production')
+    
+    if mode == 'development':
+        print("🚀 Starting Flask in DEVELOPMENT mode")
+        app.run(debug=True, host='0.0.0.0', port=port)
+    else:
+        print("🚀 Starting Flask in PRODUCTION mode") 
+        app.run(debug=False, host='0.0.0.0', port=port)
