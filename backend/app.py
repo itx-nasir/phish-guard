@@ -68,6 +68,8 @@ def test_endpoint():
     """Test endpoint for health check"""
     return jsonify({'status': 'ok', 'message': 'API is working'}), 200
 
+
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_frontend(path):
@@ -108,17 +110,7 @@ def analyze_email_content():
             return jsonify({'error': 'Empty email content'}), 400
 
         # Create analysis task
-        if os.environ.get('MODE') == 'production' and 'onrender.com' in os.environ.get('RENDER_EXTERNAL_URL', ''):
-            # Run synchronously on Render (no background workers)
-            result = EmailAnalyzer.analyze_content(email_content)
-            return jsonify({
-                'status': 'completed',
-                'result': result,
-                'message': 'Analysis completed successfully'
-            }), 200
-        else:
-            # Use Celery for local development
-            task = analyze_content_task.delay(email_content)
+        task = analyze_content_task.delay(email_content)
         
         return jsonify({
             'task_id': task.id,
@@ -157,27 +149,7 @@ def analyze_email_file():
         file.save(file_path)
 
         # Create analysis task
-        if os.environ.get('MODE') == 'production' and 'onrender.com' in os.environ.get('RENDER_EXTERNAL_URL', ''):
-            # Run synchronously on Render (no background workers)
-            try:
-                result = EmailAnalyzer.analyze_file(file_path)
-                # Clean up file
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                return jsonify({
-                    'status': 'completed',
-                    'result': result,
-                    'message': 'Analysis completed successfully'
-                }), 200
-            except Exception as e:
-                # Clean up on error
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                logger.error(f"Error in file analysis: {str(e)}")
-                return jsonify({'error': 'Analysis failed'}), 500
-        else:
-            # Use Celery for local development
-            task = analyze_file_task.delay(file_path)
+        task = analyze_file_task.delay(file_path)
 
         return jsonify({
             'task_id': task.id,
