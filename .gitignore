@@ -21,6 +21,8 @@ wheels/
 *.egg
 MANIFEST
 .env
+.env.production
+.env.production.template
 
 # Virtual Environment
 venv/
