@@ -1,0 +1,97 @@
+# Version control
+.git
+.gitignore
+*.md
+README.md
+LICENSE
+
+# Node.js
+frontend/node_modules
+frontend/build
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.DS_Store
+
+# Python
+backend/__pycache__
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.Python
+backend/env/
+backend/venv/
+backend/.venv/
+backend/pip-log.txt
+backend/pip-delete-this-directory.txt
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+backend/dist/
+backend/build/
+backend/eggs/
+backend/*.egg-info/
+
+# Logs
+*.log
+logs/
+backend/logs/
+frontend/logs/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Uploads and temporary files
+backend/uploads/
+uploads/
+*.tmp
+*.temp
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Testing
+test.eml
+*.test.eml
+test_uploads/
+
+# Environment files
+.env
+.env.*
+!.env.template
+
+# Deployment files
+render.yaml
+.render/
+
+# Documentation
+docs/
+*.md
+!backend/README.md
+!frontend/README.md

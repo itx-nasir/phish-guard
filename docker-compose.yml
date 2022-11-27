@@ -1,39 +1,137 @@
 services:
   app:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "5000:5000"
     volumes:
-      # Simple volume mounting - only mount backend for live reload
+      # Development volume mounting
       - ${PWD}/backend:/app/backend:${MOUNT_TYPE:-rw}
       - uploads_data:/app/uploads
+      - logs_data:/app/logs
     environment:
       - MODE=${MODE:-production}
+      - FLASK_DEBUG=${FLASK_DEBUG:-False}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5000}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - MAX_CONTENT_LENGTH=${MAX_CONTENT_LENGTH:-16777216}
+      - ENABLE_DETAILED_LOGGING=${ENABLE_DETAILED_LOGGING:-True}
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - phishguard-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
 
   celery_worker:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     working_dir: /app/backend
     volumes:
       - ${PWD}/backend:/app/backend:${MOUNT_TYPE:-rw}
       - uploads_data:/app/uploads
+      - logs_data:/app/logs
     environment:
       - MODE=${MODE:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    command: ["celery", "-A", "app.celery", "worker", "--loglevel=info"]
+      - REDIS_HOST=redis
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - ENABLE_DETAILED_LOGGING=${ENABLE_DETAILED_LOGGING:-True}
+    command: >
+      sh -c "
+        echo 'Starting Celery worker...' &&
+        sleep 5 &&
+        celery -A app.celery worker --loglevel=info --concurrency=2
+      "
     depends_on:
-      - redis
-      - app
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - phishguard-network
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.celery", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
 
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
+    command: >
+      redis-server 
+      --appendonly yes 
+      --appendfsync everysec 
+      --maxmemory 256mb 
+      --maxmemory-policy allkeys-lru
+      --save 900 1 
+      --save 300 10 
+      --save 60 10000
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"  # Expose for development debugging
     restart: unless-stopped
+    networks:
+      - phishguard-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
 
 volumes:
-  uploads_data: 
+  uploads_data:
+    driver: local
+  logs_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  phishguard-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 
