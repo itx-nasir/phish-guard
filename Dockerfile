@@ -1,18 +1,18 @@
-# Unified Dockerfile for both development and production
+# Simple working Dockerfile
 FROM node:18-alpine AS frontend-build
 
 WORKDIR /app/frontend
 
-# Copy package files first for better caching
+# Copy package files and install
 COPY frontend/package*.json ./
-RUN npm install --silent --no-fund --no-audit
+RUN npm install --silent
 
-# Copy source files and build
+# Copy source and build
 COPY frontend/src ./src
 COPY frontend/public ./public
 RUN npm run build
 
-# Main stage - Python with Flask
+# Main Python stage
 FROM python:3.11-slim
 
 # Install system dependencies
@@ -23,39 +23,26 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy requirements and install Python dependencies
+# Install Python dependencies
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code
+# Copy backend
 COPY backend/ ./backend/
 
-# Copy built frontend
+# Copy frontend build
 COPY --from=frontend-build /app/frontend/build ./frontend/build
 
-# Create uploads directory
-RUN mkdir -p /app/uploads && chmod 755 /app/uploads
+# Create directories
+RUN mkdir -p /app/uploads
 
-# Set environment variables
+# Set environment
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-# Create unified startup script
-RUN echo '#!/bin/bash\n\
-if [ "$MODE" = "development" ]; then\n\
-  echo "Starting in DEVELOPMENT mode..."\n\
-  cd /app/backend && python app.py\n\
-else\n\
-  echo "Starting in PRODUCTION mode..."\n\
-  cd /app/backend && python app.py\n\
-fi' > /app/start.sh && chmod +x /app/start.sh
+# Simple start script
+RUN echo '#!/bin/bash\ncd /app/backend && python app.py' > /app/start.sh && chmod +x /app/start.sh
 
-# Expose port
 EXPOSE 5000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/api/test || exit 1
-
-# Start the application
 CMD ["/app/start.sh"] 
