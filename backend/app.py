@@ -11,7 +11,7 @@ from datetime import datetime, date
 
 from config import Config
 from services.email_analyzer import EmailAnalyzer, EmailAnalysisError, EmailParsingError, FileValidationError
-from models import db, AnalysisResult, AnalysisStatistics
+from models import mongo
 from services.history_service import HistoryService
 
 # Load environment variables
@@ -34,16 +34,16 @@ app = Flask(__name__, static_folder=static_folder, static_url_path='')
 app.config.from_object(Config)
 Config.init_app(app)
 
-# Initialize database
-db.init_app(app)
+# Initialize MongoDB
+mongo.init_app(app)
 
-# Create database tables
+# Test MongoDB connection
 with app.app_context():
     try:
-        db.create_all()
-        logger.info("Database tables created successfully")
+        mongo.db.command('ping')
+        logger.info("MongoDB connection successful")
     except Exception as e:
-        logger.error(f"Error creating database tables: {str(e)}")
+        logger.error(f"Error connecting to MongoDB: {str(e)}")
 
 # Enable CORS
 CORS(app, origins=app.config['CORS_ORIGINS'])
