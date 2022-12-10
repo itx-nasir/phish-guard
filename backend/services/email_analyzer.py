@@ -6,14 +6,69 @@ import re
 import dns.resolver
 import requests
 from urllib.parse import urlparse
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Optional
 import logging
 import os
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+@dataclass
+class AnalysisResult:
+    """Data class for analysis results"""
+    threat_score: float
+    risk_level: str
+    header_analysis: Dict[str, Any]
+    content_analysis: Dict[str, Any]
+    link_analysis: Dict[str, Any]
+    attachment_analysis: Dict[str, Any]
+    recommendations: List[str]
+    timestamp: str
+    subject: str
+    sender: str
+    error: Optional[str] = None
+
+class EmailAnalysisError(Exception):
+    """Custom exception for email analysis errors"""
+    pass
+
+class EmailParsingError(EmailAnalysisError):
+    """Exception for email parsing errors"""
+    pass
+
+class FileValidationError(EmailAnalysisError):
+    """Exception for file validation errors"""
+    pass
+
 class EmailAnalyzer:
     """Service for analyzing emails for phishing indicators"""
+    
+    # Configuration constants
+    MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
+    ALLOWED_EXTENSIONS = {'.eml'}
+    
+    # Suspicious patterns configuration
+    SUSPICIOUS_KEYWORDS = {
+        'urgent', 'account suspended', 'verify your account', 'click here',
+        'update your information', 'password expired', 'security alert',
+        'unusual activity', 'limited time', 'act now', 'immediate action',
+        'congratulations', 'winner', 'lottery', 'prize', 'free money'
+    }
+    
+    URGENCY_PATTERNS = [
+        r'urgent',
+        r'immediate action required',
+        r'account.*suspend',
+        r'within \d+ hours?',
+        r'expires? (?:today|soon)',
+        r'act now',
+        r'time.?sensitive'
+    ]
+    
+    SUSPICIOUS_ATTACHMENTS = {
+        'exe', 'bat', 'cmd', 'scr', 'js', 'vbs', 'ps1',
+        'wsf', 'msi', 'jar', 'reg', 'com', 'pif', 'zip'
+    }
 
     def __init__(self):
         pass
@@ -21,18 +76,40 @@ class EmailAnalyzer:
     @staticmethod
     def analyze_content(content: str) -> Dict[str, Any]:
         """Analyze email content for phishing indicators"""
+        if not content or not content.strip():
+            logger.warning("Empty content provided for analysis")
+            return {
+                'error': 'Empty email content provided',
+                'threat_score': 0.0,
+                'risk_level': 'unknown',
+                'message': 'No content to analyze'
+            }
+        
         try:
-            # Parse email content
-            email_message = Parser(policy=policy.default).parsestr(content)
+            # Parse email content with better error handling
+            try:
+                email_message = Parser(policy=policy.default).parsestr(content)
+            except Exception as e:
+                logger.error(f"Failed to parse email content: {str(e)}")
+                raise EmailParsingError(f"Invalid email format: {str(e)}")
             
             # Create analyzer instance
             analyzer = EmailAnalyzer()
             
-            # Perform various analyses
-            header_analysis = analyzer._analyze_headers(email_message)
-            content_analysis = analyzer._analyze_body(email_message)
-            link_analysis = analyzer._analyze_links(email_message)
-            attachment_analysis = analyzer._analyze_attachments(email_message)
+            # Perform various analyses with error handling
+            try:
+                header_analysis = analyzer._analyze_headers(email_message)
+                content_analysis = analyzer._analyze_body(email_message)
+                link_analysis = analyzer._analyze_links(email_message)
+                attachment_analysis = analyzer._analyze_attachments(email_message)
+            except Exception as e:
+                logger.error(f"Error during analysis components: {str(e)}")
+                return {
+                    'error': f'Analysis failed: {str(e)}',
+                    'threat_score': 0.0,
+                    'risk_level': 'unknown',
+                    'message': 'Partial analysis failure'
+                }
             
             # Calculate overall threat score
             threat_score = analyzer._calculate_threat_score(
@@ -42,7 +119,7 @@ class EmailAnalyzer:
                 attachment_analysis
             )
             
-            return {
+            result = {
                 'threat_score': threat_score,
                 'risk_level': analyzer._get_risk_level(threat_score),
                 'header_analysis': header_analysis,
@@ -60,34 +137,71 @@ class EmailAnalyzer:
                 'sender': str(email_message.get('From', 'Unknown'))
             }
             
+            logger.info(f"Email analysis completed. Threat score: {threat_score:.2f}, Risk: {result['risk_level']}")
+            return result
+            
+        except EmailParsingError:
+            # Re-raise parsing errors
+            raise
         except Exception as e:
-            logger.error(f"Error analyzing email content: {str(e)}")
+            logger.error(f"Unexpected error analyzing email content: {str(e)}", exc_info=True)
             return {
-                'error': str(e),
+                'error': f'Internal analysis error: {str(e)}',
                 'threat_score': 0.0,
                 'risk_level': 'unknown',
-                'message': 'Analysis failed due to parsing error'
+                'message': 'Analysis failed due to unexpected error'
             }
 
     @staticmethod
     def analyze_file(file_path: str) -> Dict[str, Any]:
         """Analyze email file for phishing indicators"""
         try:
+            # Validate file existence and permissions
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"File not found: {file_path}")
-                
-            with open(file_path, 'rb') as f:
-                email_message = BytesParser(policy=policy.default).parse(f)
             
-            return EmailAnalyzer.analyze_content(email_message.as_string())
+            if not os.access(file_path, os.R_OK):
+                raise PermissionError(f"Cannot read file: {file_path}")
             
+            # Validate file size
+            file_size = os.path.getsize(file_path)
+            if file_size > EmailAnalyzer.MAX_FILE_SIZE:
+                raise FileValidationError(f"File too large: {file_size} bytes. Maximum allowed: {EmailAnalyzer.MAX_FILE_SIZE} bytes")
+            
+            if file_size == 0:
+                raise FileValidationError("File is empty")
+            
+            # Validate file extension
+            file_ext = os.path.splitext(file_path)[1].lower()
+            if file_ext not in EmailAnalyzer.ALLOWED_EXTENSIONS:
+                raise FileValidationError(f"Invalid file extension: {file_ext}. Allowed: {EmailAnalyzer.ALLOWED_EXTENSIONS}")
+            
+            # Read and parse file
+            try:
+                with open(file_path, 'rb') as f:
+                    email_message = BytesParser(policy=policy.default).parse(f)
+            except UnicodeDecodeError as e:
+                logger.error(f"Unicode decode error reading file {file_path}: {str(e)}")
+                raise EmailParsingError(f"File encoding error: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error reading email file {file_path}: {str(e)}")
+                raise EmailParsingError(f"Failed to parse email file: {str(e)}")
+            
+            # Analyze the parsed email
+            result = EmailAnalyzer.analyze_content(email_message.as_string())
+            logger.info(f"File analysis completed for: {os.path.basename(file_path)}")
+            return result
+            
+        except (FileNotFoundError, PermissionError, FileValidationError, EmailParsingError):
+            # Re-raise known exceptions
+            raise
         except Exception as e:
-            logger.error(f"Error analyzing email file: {str(e)}")
+            logger.error(f"Unexpected error analyzing email file {file_path}: {str(e)}", exc_info=True)
             return {
-                'error': str(e),
+                'error': f'File analysis failed: {str(e)}',
                 'threat_score': 0.0,
                 'risk_level': 'unknown',
-                'message': 'File analysis failed'
+                'message': 'File analysis failed due to unexpected error'
             }
 
     def _analyze_headers(self, email_message: email.message.Message) -> Dict[str, Any]:
@@ -141,28 +255,13 @@ class EmailAnalyzer:
         # Get email body
         body = self._get_email_body(email_message)
         
-        # Suspicious keywords
-        suspicious_keywords = {
-            'urgent', 'account suspended', 'verify your account', 'click here',
-            'update your information', 'password expired', 'security alert',
-            'unusual activity', 'limited time', 'act now'
-        }
-        
         # Check for suspicious keywords
-        for keyword in suspicious_keywords:
+        for keyword in self.SUSPICIOUS_KEYWORDS:
             if keyword.lower() in body.lower():
                 results['suspicious_keywords'].append(keyword)
         
         # Check for urgency indicators
-        urgency_patterns = [
-            r'urgent',
-            r'immediate action required',
-            r'account.*suspend',
-            r'within \d+ hours?',
-            r'expires? (?:today|soon)',
-        ]
-        
-        for pattern in urgency_patterns:
+        for pattern in self.URGENCY_PATTERNS:
             if re.search(pattern, body.lower()):
                 results['urgency_indicators'].append(pattern)
         
@@ -382,11 +481,11 @@ class EmailAnalyzer:
     @staticmethod
     def _is_suspicious_attachment(filename: str) -> bool:
         """Check if attachment is potentially dangerous"""
-        suspicious_extensions = {
-            'exe', 'bat', 'cmd', 'scr', 'js', 'vbs', 'ps1',
-            'wsf', 'msi', 'jar', 'reg', 'com', 'pif'
-        }
-        return filename.split('.')[-1].lower() in suspicious_extensions
+        if not filename or '.' not in filename:
+            return False
+        
+        extension = filename.split('.')[-1].lower()
+        return extension in EmailAnalyzer.SUSPICIOUS_ATTACHMENTS
 
 
 # Note: Celery tasks are now defined in app.py to avoid circular imports
