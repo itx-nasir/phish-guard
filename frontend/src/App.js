@@ -7,6 +7,7 @@ import { blue, red } from '@mui/material/colors';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import AnalysisResult from './pages/AnalysisResult';
+import HistoryDashboard from './pages/HistoryDashboard';
 import NotFound from './pages/NotFound';
 
 // Create theme
@@ -50,6 +51,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/analysis/:taskId" element={<AnalysisResult />} />
+            <Route path="/history" element={<HistoryDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
