@@ -9,13 +9,9 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     
-    # Database settings
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///phishguard.db')
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_pre_ping': True,
-        'pool_recycle': 300,
-    }
+    # MongoDB settings
+    MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/phishguard')
+    MONGO_DBNAME = os.getenv('MONGO_DBNAME', 'phishguard')
     
     # File upload settings
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', os.path.join('/app', 'uploads'))
