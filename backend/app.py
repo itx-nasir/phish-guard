@@ -212,6 +212,19 @@ def test_endpoint():
     """Test endpoint for health check"""
     return jsonify({'status': 'ok', 'message': 'API is working'}), 200
 
+@app.route('/api/debug/config', methods=['GET'])
+def debug_config():
+    """Debug endpoint to check configuration"""
+    return jsonify({
+        'enable_threat_intelligence': Config.ENABLE_THREAT_INTELLIGENCE,
+        'virustotal_api_key_configured': bool(Config.VIRUSTOTAL_API_KEY),
+        'virustotal_api_key_length': len(Config.VIRUSTOTAL_API_KEY) if Config.VIRUSTOTAL_API_KEY else 0,
+        'environment_vars': {
+            'ENABLE_THREAT_INTELLIGENCE': os.getenv('ENABLE_THREAT_INTELLIGENCE'),
+            'VIRUSTOTAL_API_KEY_set': bool(os.getenv('VIRUSTOTAL_API_KEY'))
+        }
+    })
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_frontend(path):
