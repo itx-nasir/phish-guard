@@ -8,6 +8,7 @@ Advanced email phishing detection system with comprehensive analysis and histori
 - **Multi-layer Detection** - Analyzes headers, content, links, and attachments
 - **Threat Scoring** - Returns threat score (0-100%) and risk level (Low/Medium/High)
 - **Background Processing** - Fast response with Celery + Redis
+- **Batch Processing** - Analyze multiple emails simultaneously (up to 10 files)
 - **📊 Historical Dashboard** - Track analysis history with interactive charts and statistics
 - **📈 Trend Analysis** - Visualize threat patterns over time
 - **📋 Data Export** - Export analysis results in CSV or JSON format
@@ -40,11 +41,32 @@ docker-compose up --build
 
 ## 🧪 Test it
 
-1. **Web Interface** - Upload `test-sample.eml` (included) or paste email content
-2. **View Results** - Get detailed analysis with threat score and recommendations
+1. **Single File Analysis**
+   - Upload `test-sample.eml` (included) or paste email content
+   - Get detailed analysis with threat score and recommendations
+
+2. **Batch Analysis**
+   - Select multiple `.eml` files (up to 10) or drag-and-drop them
+   - View batch processing progress and individual results
+   - Download combined analysis report
+   - Access detailed analysis for each file
+
 3. **Historical Dashboard** - Visit `/history` to see analysis trends and statistics
+
 4. **API Testing**:
 ```bash
+# Single file analysis
+curl -X POST \
+  -F "file=@test-sample.eml" \
+  http://localhost:5000/api/analyze/file
+
+# Batch analysis
+curl -X POST \
+  -F "files[]=@test-sample.eml" \
+  -F "files[]=@test-phishing.eml" \
+  http://localhost:5000/api/analyze/batch
+
+# Content analysis
 curl -X POST \
   -H "Content-Type: application/json" \
   -d '{"content":"From: suspicious@phishing.com\nSubject: URGENT Account Suspended"}' \
@@ -55,7 +77,8 @@ curl -X POST \
 
 ### Analysis
 - `POST /api/analyze/content` - Analyze email text
-- `POST /api/analyze/file` - Upload .eml file  
+- `POST /api/analyze/file` - Upload single .eml file
+- `POST /api/analyze/batch` - Upload multiple .eml files (max 10)
 - `GET /api/analysis/{task_id}` - Get analysis results
 
 ### Historical Data
@@ -82,7 +105,6 @@ curl -X POST \
 
 ### 🔥 High Priority
 - **Advanced Threat Intelligence** - VirusTotal API integration and real-time threat feeds
-- **Batch Processing** - Upload and analyze multiple emails simultaneously
 - **Email Chain Analysis** - Analyze forwarding patterns and email threads
 - **Custom Rules Engine** - User-defined detection rules and scoring
 
