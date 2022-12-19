@@ -22,6 +22,8 @@ services:
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
       - MAX_CONTENT_LENGTH=${MAX_CONTENT_LENGTH:-16777216}
       - ENABLE_DETAILED_LOGGING=${ENABLE_DETAILED_LOGGING:-True}
+      - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY}
+      - ENABLE_THREAT_INTELLIGENCE=${ENABLE_THREAT_INTELLIGENCE:-True}
     depends_on:
       redis:
         condition: service_healthy
@@ -63,6 +65,8 @@ services:
       - MONGO_URI=mongodb://mongodb:27017/phishguard
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
       - ENABLE_DETAILED_LOGGING=${ENABLE_DETAILED_LOGGING:-True}
+      - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY}
+      - ENABLE_THREAT_INTELLIGENCE=${ENABLE_THREAT_INTELLIGENCE:-True}
     command: >
       sh -c "
         echo 'Starting Celery worker...' &&
