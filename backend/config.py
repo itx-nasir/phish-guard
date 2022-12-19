@@ -37,6 +37,10 @@ class Config:
     MAX_ANALYSIS_TIME = int(os.getenv('MAX_ANALYSIS_TIME', 180))  # 3 minutes
     ENABLE_DETAILED_LOGGING = os.getenv('ENABLE_DETAILED_LOGGING', 'True').lower() == 'true'
     
+    # Threat Intelligence settings
+    VIRUSTOTAL_API_KEY = os.getenv('VIRUSTOTAL_API_KEY')
+    ENABLE_THREAT_INTELLIGENCE = os.getenv('ENABLE_THREAT_INTELLIGENCE', 'True').lower() == 'true'
+    
     @classmethod
     def validate_config(cls) -> List[str]:
         """Validate configuration and return list of issues"""
