@@ -1,0 +1,24 @@
+From: "PayPal Security" <security@suspicious-paypal.com>
+To: "User" <user@example.com>
+Subject: Urgent: Your PayPal Account Has Been Suspended
+Date: Thu, 14 Mar 2024 10:30:00 -0500
+Content-Type: text/html; charset="UTF-8"
+
+<html>
+<body>
+<p>Dear Valued Customer,</p>
+
+<p>We have detected unusual activity in your PayPal account. Your account has been temporarily suspended for security reasons.</p>
+
+<p>To restore your account access, please click the link below and verify your information:</p>
+
+<p><a href="http://fake-paypal-security.tk/verify.php">Click here to verify your account</a></p>
+
+<p>If you don't verify within 24 hours, your account will be permanently suspended.</p>
+
+<p>Best regards,<br>
+PayPal Security Team</p>
+
+<img src="http://tracking.malicious-domain.ml/pixel.gif" width="1" height="1" />
+</body>
+</html> 

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_ENDPOINTS } from '../utils/constants';
 import {
   Box,
   Button,
@@ -13,6 +14,9 @@ import {
   Alert,
   CircularProgress,
   LinearProgress,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
@@ -41,6 +45,7 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [validationErrors, setValidationErrors] = useState({});
+  const [selectedFiles, setSelectedFiles] = useState([]);
 
   // Validation functions
   const validateEmailContent = useCallback((content) => {
@@ -62,19 +67,21 @@ const Dashboard = () => {
     return errors;
   }, []);
 
-  const validateFile = useCallback((file) => {
-    const errors = {};
+  const validateFiles = useCallback((files) => {
+    const errors = [];
     
-    if (!file.name.toLowerCase().endsWith('.eml')) {
-      errors.extension = 'Only .eml files are supported';
-    }
-    
-    if (file.size > 16 * 1024 * 1024) {
-      errors.size = 'File size must be less than 16MB';
-    }
-    
-    if (file.size === 0) {
-      errors.empty = 'File appears to be empty';
+    for (const file of files) {
+      if (!file.name.toLowerCase().endsWith('.eml')) {
+        errors.push(`${file.name}: Only .eml files are supported`);
+      }
+      
+      if (file.size > 16 * 1024 * 1024) {
+        errors.push(`${file.name}: File size must be less than 16MB`);
+      }
+      
+      if (file.size === 0) {
+        errors.push(`${file.name}: File appears to be empty`);
+      }
     }
     
     return errors;
@@ -97,59 +104,25 @@ const Dashboard = () => {
     setError(errorMessage);
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
-    accept: {
-      'message/rfc822': ['.eml'],
-    },
-    maxSize: 16 * 1024 * 1024, // 16MB
-    multiple: false,
-    onDrop: async (acceptedFiles, rejectedFiles) => {
-      // Handle rejected files
-      if (rejectedFiles.length > 0) {
-        const rejection = rejectedFiles[0];
-        if (rejection.errors.some(e => e.code === 'file-too-large')) {
-          setError('File is too large. Maximum size is 16MB.');
-        } else if (rejection.errors.some(e => e.code === 'file-invalid-type')) {
-          setError('Invalid file type. Please select an .eml file.');
-        } else {
-          setError('File validation failed. Please try another file.');
-        }
-        return;
-      }
-
-      if (acceptedFiles.length > 0) {
-        const file = acceptedFiles[0];
-        const fileErrors = validateFile(file);
-        
-        if (Object.keys(fileErrors).length > 0) {
-          setError(Object.values(fileErrors)[0]);
-          return;
-        }
-        
-        await handleFileUpload(file);
-      }
-    },
-    onDropRejected: (rejectedFiles) => {
-      console.log('Files rejected:', rejectedFiles);
-    }
-  });
-
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
     setError(null);
     setValidationErrors({});
+    setSelectedFiles([]);
   };
 
-  const handleFileUpload = async (file) => {
+  const handleBatchUpload = async (files) => {
     setError(null);
     setIsLoading(true);
     setUploadProgress(0);
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      files.forEach(file => {
+        formData.append('files[]', file);
+      });
 
-      const response = await axios.post('/api/analyze/file', formData, {
+      const response = await axios.post(API_ENDPOINTS.ANALYZE_BATCH, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -159,18 +132,60 @@ const Dashboard = () => {
         },
       });
       
-      if (response.data.task_id) {
-        navigate(`/analysis/${response.data.task_id}`);
+      if (response.data.task_ids) {
+        // Navigate to batch results page
+        navigate('/batch-analysis', { 
+          state: { taskIds: response.data.task_ids }
+        });
       } else {
-        throw new Error('No task ID received from server');
+        throw new Error('No task IDs received from server');
       }
     } catch (err) {
-      handleError(err, 'file upload');
+      handleError(err, 'batch upload');
     } finally {
       setIsLoading(false);
       setUploadProgress(0);
     }
   };
+
+  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
+    accept: {
+      'message/rfc822': ['.eml'],
+    },
+    maxSize: 16 * 1024 * 1024, // 16MB
+    multiple: true, // Enable multiple file selection
+    onDrop: async (acceptedFiles, rejectedFiles) => {
+      // Handle rejected files
+      if (rejectedFiles.length > 0) {
+        const errors = rejectedFiles.map(rejection => {
+          if (rejection.errors.some(e => e.code === 'file-too-large')) {
+            return `${rejection.file.name}: File is too large. Maximum size is 16MB.`;
+          } else if (rejection.errors.some(e => e.code === 'file-invalid-type')) {
+            return `${rejection.file.name}: Invalid file type. Please select an .eml file.`;
+          }
+          return `${rejection.file.name}: File validation failed.`;
+        });
+        setError(errors.join('\n'));
+        return;
+      }
+
+      if (acceptedFiles.length > 0) {
+        if (acceptedFiles.length > 10) {
+          setError('Maximum 10 files can be uploaded at once');
+          return;
+        }
+
+        const fileErrors = validateFiles(acceptedFiles);
+        if (fileErrors.length > 0) {
+          setError(fileErrors.join('\n'));
+          return;
+        }
+
+        setSelectedFiles(acceptedFiles);
+        await handleBatchUpload(acceptedFiles);
+      }
+    }
+  });
 
   const handleContentSubmit = async () => {
     // Validate content
@@ -224,7 +239,7 @@ const Dashboard = () => {
       </Typography>
       
       <Typography variant="body1" color="text.secondary" paragraph>
-        Upload an email file (.eml) or paste email content to analyze it for potential phishing threats.
+        Upload one or multiple email files (.eml) or paste email content to analyze for potential phishing threats.
         Our advanced detection system will examine headers, content, links, and attachments.
       </Typography>
 
@@ -232,7 +247,7 @@ const Dashboard = () => {
         <CardContent>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={tabValue} onChange={handleTabChange} aria-label="analysis method tabs">
-              <Tab label="Upload File" id="tab-0" aria-controls="tabpanel-0" />
+              <Tab label="Upload Files" id="tab-0" aria-controls="tabpanel-0" />
               <Tab label="Paste Content" id="tab-1" aria-controls="tabpanel-1" />
             </Tabs>
           </Box>
@@ -256,7 +271,7 @@ const Dashboard = () => {
           {/* Error display */}
           {error && (
             <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>
-              {error}
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{error}</pre>
             </Alert>
           )}
 
@@ -289,21 +304,38 @@ const Dashboard = () => {
               {isLoading ? (
                 <Box>
                   <CircularProgress size={24} sx={{ mb: 2 }} />
-                  <Typography>Processing file...</Typography>
+                  <Typography>Processing files...</Typography>
                 </Box>
               ) : (
                 <>
                   <Typography>
                     {isDragReject
-                      ? 'File type not supported'
+                      ? 'Some files are not supported'
                       : isDragActive
-                        ? 'Drop the file here'
-                        : 'Drag and drop an .eml file here, or click to select file'
+                        ? 'Drop the files here'
+                        : 'Drag and drop .eml files here, or click to select files'
                     }
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    Maximum file size: 16MB • Supported format: .eml
+                    Maximum 10 files • Maximum size per file: 16MB • Supported format: .eml
                   </Typography>
+                  {selectedFiles.length > 0 && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Selected Files:
+                      </Typography>
+                      <List dense>
+                        {selectedFiles.map((file, index) => (
+                          <ListItem key={index}>
+                            <ListItemText
+                              primary={file.name}
+                              secondary={`${(file.size / 1024).toFixed(1)} KB`}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Box>
+                  )}
                 </>
               )}
             </Box>
