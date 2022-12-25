@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
   TEST: '/api/test',
   ANALYZE_CONTENT: '/api/analyze/content',
   ANALYZE_FILE: '/api/analyze/file',
+  ANALYZE_BATCH: '/api/analyze/batch',
   ANALYSIS_RESULT: (taskId) => `/api/analysis/${taskId}`,
 };
 
