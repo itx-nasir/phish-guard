@@ -1,0 +1,58 @@
+Return-Path: <notifications@github.com>
+Delivered-To: developer@company.com
+Received: from mail-ej1-f41.google.com ([209.85.208.41])
+	by mail.company.com with ESMTPS id xyz789
+	for <developer@company.com>; Wed, 16 Nov 2023 14:25:30 +0000
+Received: by mail-ej1-f41.google.com with SMTP id xyz789
+	for <developer@company.com>; Wed, 16 Nov 2023 06:25:30 -0800
+Authentication-Results: mail.company.com;
+	spf=pass smtp.mailfrom=notifications@github.com;
+	dkim=pass header.d=github.com;
+	dmarc=pass policy.dmarc=quarantine header.from=github.com
+Message-ID: <clean-test-001@github.com>
+Date: Wed, 16 Nov 2023 14:25:15 +0000
+From: "GitHub" <notifications@github.com>
+To: developer@company.com
+Subject: Pull Request Merged - Project Update
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_002_clean_test"
+
+------=_Part_002_clean_test
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GitHub Notification</title>
+</head>
+<body>
+    <h2>Pull Request Merged</h2>
+    
+    <p>Hello Developer,</p>
+    
+    <p>Your pull request has been successfully merged into the main branch.</p>
+    
+    <p>You can view the changes at: <a href="https://github.com/user/repo/pull/123">https://github.com/user/repo/pull/123</a></p>
+    
+    <p>Repository: <a href="https://github.com/user/repo">https://github.com/user/repo</a></p>
+    
+    <p>If you have any questions, please visit our help documentation: <a href="https://docs.github.com">https://docs.github.com</a></p>
+    
+    <p>Thank you for your contribution!</p>
+    
+    <br>
+    <p>Best regards,<br>
+    The GitHub Team</p>
+</body>
+</html>
+
+------=_Part_002_clean_test
+Content-Type: text/plain
+Content-Disposition: attachment; filename="changes.txt"
+Content-Transfer-Encoding: base64
+
+Q2hhbmdlcyBpbiB0aGlzIHB1bGwgcmVxdWVzdDoKCi0gQWRkZWQgbmV3IGZlYXR1cmUKLSBGaXhl
+ZCBidWcgaW4gdXNlciBhdXRoZW50aWNhdGlvbgotIFVwZGF0ZWQgZG9jdW1lbnRhdGlvbgo=
+
+------=_Part_002_clean_test-- 
