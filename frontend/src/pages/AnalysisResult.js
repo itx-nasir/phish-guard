@@ -650,6 +650,228 @@ const AnalysisResult = () => {
             </CardContent>
           </Card>
         </Grid>
+
+        {/* Threat Intelligence */}
+        {analysis.threat_intelligence && (
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  VirusTotal Threat Intelligence
+                </Typography>
+                
+                {analysis.threat_intelligence.info && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    {analysis.threat_intelligence.info}
+                  </Alert>
+                )}
+                
+                {analysis.threat_intelligence.error && (
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    {analysis.threat_intelligence.error}
+                  </Alert>
+                )}
+
+                {/* Malicious Indicators */}
+                {analysis.threat_intelligence.malicious_indicators?.length > 0 && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" gutterBottom color="error">
+                      Malicious Indicators Detected
+                    </Typography>
+                    <List>
+                      {analysis.threat_intelligence.malicious_indicators.map((indicator, index) => (
+                        <ListItem key={index}>
+                          <ListItemIcon>
+                            <Error color="error" />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={indicator}
+                            secondary="Flagged as malicious by VirusTotal"
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+
+                {/* Suspicious Indicators */}
+                {analysis.threat_intelligence.suspicious_indicators?.length > 0 && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" gutterBottom color="warning.main">
+                      Suspicious Indicators
+                    </Typography>
+                    <List>
+                      {analysis.threat_intelligence.suspicious_indicators.map((indicator, index) => (
+                        <ListItem key={index}>
+                          <ListItemIcon>
+                            <Security color="warning" />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={indicator}
+                            secondary="Flagged as suspicious by VirusTotal"
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+
+                {/* Sender Domain Analysis */}
+                {analysis.threat_intelligence.virustotal_sender_analysis?.length > 0 && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Sender Domain Analysis
+                    </Typography>
+                    {analysis.threat_intelligence.virustotal_sender_analysis.map((domainReport, index) => (
+                      <Card key={index} variant="outlined" sx={{ mb: 1 }}>
+                        <CardContent sx={{ py: 1 }}>
+                          <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                            {domainReport.domain}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                            <Chip
+                              label={`Malicious: ${domainReport.malicious_count}`}
+                              color={domainReport.malicious_count > 0 ? 'error' : 'default'}
+                              size="small"
+                            />
+                            <Chip
+                              label={`Suspicious: ${domainReport.suspicious_count}`}
+                              color={domainReport.suspicious_count > 0 ? 'warning' : 'default'}
+                              size="small"
+                            />
+                            <Chip
+                              label={`Reputation: ${domainReport.reputation || 'N/A'}`}
+                              color={domainReport.reputation < 0 ? 'error' : 'success'}
+                              size="small"
+                            />
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Box>
+                )}
+
+                {/* File Hash Analysis */}
+                {analysis.threat_intelligence.virustotal_file_analysis?.length > 0 && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Attachment Analysis
+                    </Typography>
+                    {analysis.threat_intelligence.virustotal_file_analysis.map((fileReport, index) => (
+                      <Card key={index} variant="outlined" sx={{ mb: 1 }}>
+                        <CardContent sx={{ py: 1 }}>
+                          <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                            📎 {fileReport.filename}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                            Hash: {fileReport.hash?.substring(0, 16)}...
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Chip
+                              label={`Malicious: ${fileReport.malicious_count}`}
+                              color={fileReport.malicious_count > 0 ? 'error' : 'default'}
+                              size="small"
+                            />
+                            <Chip
+                              label={`Suspicious: ${fileReport.suspicious_count}`}
+                              color={fileReport.suspicious_count > 0 ? 'warning' : 'default'}
+                              size="small"
+                            />
+                            <Chip
+                              label={`Clean: ${fileReport.harmless_count}`}
+                              color="success"
+                              size="small"
+                            />
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Box>
+                )}
+
+                {/* URL Analysis Results */}
+                {analysis.threat_intelligence.virustotal_url_analysis?.length > 0 && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      URL Analysis Results
+                    </Typography>
+                    {analysis.threat_intelligence.virustotal_url_analysis.map((urlReport, index) => (
+                      <Card key={index} variant="outlined" sx={{ mb: 1 }}>
+                        <CardContent sx={{ py: 1 }}>
+                          <Typography variant="body2" sx={{ wordBreak: 'break-all', mb: 1 }}>
+                            {urlReport.url}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Chip
+                              label={`Malicious: ${urlReport.malicious_count}`}
+                              color={urlReport.malicious_count > 0 ? 'error' : 'default'}
+                              size="small"
+                            />
+                            <Chip
+                              label={`Suspicious: ${urlReport.suspicious_count}`}
+                              color={urlReport.suspicious_count > 0 ? 'warning' : 'default'}
+                              size="small"
+                            />
+                            <Chip
+                              label={`Clean: ${urlReport.harmless_count}`}
+                              color="success"
+                              size="small"
+                            />
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Box>
+                )}
+
+                {/* IP Analysis Results */}
+                {analysis.threat_intelligence.virustotal_ip_analysis?.length > 0 && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      IP Address Analysis
+                    </Typography>
+                    {analysis.threat_intelligence.virustotal_ip_analysis.map((ipReport, index) => (
+                      <Card key={index} variant="outlined" sx={{ mb: 1 }}>
+                        <CardContent sx={{ py: 1 }}>
+                          <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                            🌐 {ipReport.ip} ({ipReport.country || 'Unknown'})
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Chip
+                              label={`Malicious: ${ipReport.malicious_count}`}
+                              color={ipReport.malicious_count > 0 ? 'error' : 'default'}
+                              size="small"
+                            />
+                            <Chip
+                              label={`Suspicious: ${ipReport.suspicious_count}`}
+                              color={ipReport.suspicious_count > 0 ? 'warning' : 'default'}
+                              size="small"
+                            />
+                            <Chip
+                              label={`Reputation: ${ipReport.reputation || 'N/A'}`}
+                              color={ipReport.reputation < 0 ? 'error' : 'success'}
+                              size="small"
+                            />
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Box>
+                )}
+                
+                {!analysis.threat_intelligence.malicious_indicators?.length && 
+                 !analysis.threat_intelligence.suspicious_indicators?.length && 
+                 !analysis.threat_intelligence.virustotal_url_analysis?.length &&
+                 !analysis.threat_intelligence.info &&
+                 !analysis.threat_intelligence.error && (
+                  <Typography variant="body2" color="text.secondary">
+                    No threat intelligence data available for this email.
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
       </Grid>
 
       {/* Action Buttons */}
