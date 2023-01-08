@@ -162,8 +162,6 @@ docker-compose restart
 # Clean rebuild (removes database)
 docker-compose down -v && docker-compose up --build
 
-# View database (SQLite)
-docker-compose exec app sqlite3 /app/phishguard.db
 ```
 
 ## 📊 Database Schema

@@ -1,0 +1,21 @@
+
+Email Forwarding Analysis
+Analyze email chains
+Detect forwarding manipulation
+🌟 Medium Priority Features
+Custom Rules Engine
+Allow users to define custom detection rules
+Rule-based scoring system
+API Integration
+REST API for programmatic access
+Webhook notifications
+Advanced Reporting
+PDF report generation
+Email alerts for high-risk detections
+Machine Learning Enhancement
+Train ML models on phishing patterns
+Implement NLP for content analysis
+💡 Nice-to-Have Features
+Browser Extension
+Real-time email analysis in Gmail/Outlook
+Quick phishing checks
