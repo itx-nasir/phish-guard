@@ -11,7 +11,7 @@ from datetime import datetime, date
 
 from config import Config
 from services.email_analyzer import EmailAnalyzer, EmailAnalysisError, EmailParsingError, FileValidationError
-from models import db, AnalysisResult, AnalysisStatistics
+from models import mongo
 from services.history_service import HistoryService
 
 # Load environment variables
@@ -34,16 +34,16 @@ app = Flask(__name__, static_folder=static_folder, static_url_path='')
 app.config.from_object(Config)
 Config.init_app(app)
 
-# Initialize database
-db.init_app(app)
+# Initialize MongoDB
+mongo.init_app(app)
 
-# Create database tables
+# Test MongoDB connection
 with app.app_context():
     try:
-        db.create_all()
-        logger.info("Database tables created successfully")
+        mongo.db.command('ping')
+        logger.info("MongoDB connection successful")
     except Exception as e:
-        logger.error(f"Error creating database tables: {str(e)}")
+        logger.error(f"Error connecting to MongoDB: {str(e)}")
 
 # Enable CORS
 CORS(app, origins=app.config['CORS_ORIGINS'])
@@ -341,6 +341,80 @@ def analyze_email_file():
         return jsonify({
             'error': 'Internal server error',
             'details': 'An unexpected error occurred while processing your file'
+        }), 500
+
+@app.route('/api/analyze/batch', methods=['POST'])
+def analyze_batch_files():
+    """Analyze multiple uploaded email files"""
+    try:
+        # Check if files were uploaded
+        if 'files[]' not in request.files:
+            return jsonify({
+                'error': 'No files uploaded',
+                'details': 'Please select at least one file to analyze'
+            }), 400
+
+        files = request.files.getlist('files[]')
+        
+        if not files or len(files) == 0:
+            return jsonify({
+                'error': 'No files selected',
+                'details': 'Please select at least one file to analyze'
+            }), 400
+
+        if len(files) > 10:  # Limit batch size
+            return jsonify({
+                'error': 'Too many files',
+                'details': 'Maximum 10 files can be analyzed at once'
+            }), 400
+
+        task_ids = []
+        errors = []
+
+        for file in files:
+            try:
+                # Generate secure filename
+                original_filename = secure_filename(file.filename)
+                filename = f"{uuid.uuid4()}_{original_filename}"
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                
+                # Save file
+                file.save(file_path)
+                
+                # Validate saved file
+                if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
+                    errors.append({
+                        'filename': original_filename,
+                        'error': 'File is empty or corrupted'
+                    })
+                    continue
+
+                # Create analysis task
+                task = analyze_file_task.delay(file_path)
+                task_ids.append({
+                    'filename': original_filename,
+                    'task_id': task.id
+                })
+                logger.info(f"Created batch analysis task: {task.id} for file: {original_filename}")
+
+            except Exception as e:
+                logger.error(f"Error processing file {file.filename}: {str(e)}")
+                errors.append({
+                    'filename': file.filename,
+                    'error': str(e)
+                })
+
+        return jsonify({
+            'task_ids': task_ids,
+            'errors': errors,
+            'message': f'Successfully queued {len(task_ids)} files for analysis'
+        }), 202
+
+    except Exception as e:
+        logger.error(f"Unexpected error in batch analysis: {str(e)}", exc_info=True)
+        return jsonify({
+            'error': 'Internal server error',
+            'details': 'An unexpected error occurred while processing your files'
         }), 500
 
 @app.route('/api/analysis/<task_id>', methods=['GET'])

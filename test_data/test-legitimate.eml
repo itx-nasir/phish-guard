@@ -1,0 +1,27 @@
+From: "John Smith" <john.smith@company.com>
+To: "User" <user@example.com>
+Subject: Team Meeting Next Week
+Date: Thu, 14 Mar 2024 11:00:00 -0500
+Content-Type: text/plain; charset="UTF-8"
+DKIM-Signature: v=1; a=rsa-sha256; d=company.com; s=selector1; c=relaxed/relaxed; q=dns/txt; t=1647270000; h=from:to:subject:date; bh=...
+Authentication-Results: spf=pass smtp.mailfrom=john.smith@company.com; dkim=pass header.d=company.com
+
+Hi there,
+
+Just wanted to confirm our team meeting for next Tuesday at 2 PM EST.
+
+Agenda:
+1. Project updates
+2. Q2 planning
+3. Team building activities
+
+Please let me know if you have any topics you'd like to add to the agenda.
+
+Best regards,
+John
+
+-- 
+John Smith
+Senior Project Manager
+Company Inc.
+Tel: +1 (555) 123-4567 
