@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_from_directory, send_file, make_response
 from flask_cors import CORS
 from celery import Celery
 from dotenv import load_dotenv
@@ -7,9 +7,12 @@ import logging
 import uuid
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
+from datetime import datetime, date
 
 from config import Config
 from services.email_analyzer import EmailAnalyzer, EmailAnalysisError, EmailParsingError, FileValidationError
+from models import db, AnalysisResult, AnalysisStatistics
+from services.history_service import HistoryService
 
 # Load environment variables
 load_dotenv()
@@ -30,6 +33,17 @@ static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '
 app = Flask(__name__, static_folder=static_folder, static_url_path='')
 app.config.from_object(Config)
 Config.init_app(app)
+
+# Initialize database
+db.init_app(app)
+
+# Create database tables
+with app.app_context():
+    try:
+        db.create_all()
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Error creating database tables: {str(e)}")
 
 # Enable CORS
 CORS(app, origins=app.config['CORS_ORIGINS'])
@@ -68,6 +82,14 @@ def analyze_content_task(self, content):
         logger.info(f"Starting content analysis task: {self.request.id}")
         result = EmailAnalyzer.analyze_content(content)
         logger.info(f"Content analysis task completed: {self.request.id}")
+        
+        # Save result to database
+        with app.app_context():
+            HistoryService.save_analysis_result(
+                task_id=self.request.id,
+                analysis_result=result,
+                analysis_type='content'
+            )
         return result
     except EmailAnalysisError as e:
         logger.error(f"Email analysis error in task {self.request.id}: {str(e)}")
@@ -89,9 +111,21 @@ def analyze_file_task(self, file_path):
             raise ValueError("No file path provided")
         
         logger.info(f"Starting file analysis task: {self.request.id} - File: {os.path.basename(file_path)}")
+        
+        # Get file size before analysis
+        file_size = os.path.getsize(file_path) if os.path.exists(file_path) else None
+        
         result = EmailAnalyzer.analyze_file(file_path)
         logger.info(f"File analysis task completed: {self.request.id}")
         
+        # Save result to database
+        with app.app_context():
+            HistoryService.save_analysis_result(
+                task_id=self.request.id,
+                analysis_result=result,
+                analysis_type='file',
+                file_size=file_size
+            )
         # Clean up temporary file
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -377,6 +411,146 @@ def get_analysis_result(task_id):
             'error': 'Internal server error',
             'details': 'Unable to fetch analysis results'
         }), 500
+
+# Historical Dashboard API Endpoints
+
+@app.route('/api/history', methods=['GET'])
+def get_analysis_history():
+    """Get paginated analysis history with optional filters"""
+    try:
+        # Get query parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 20, type=int), 100)
+        risk_level = request.args.get('risk_level')
+        date_from = request.args.get('date_from')
+        date_to = request.args.get('date_to')
+        
+        # Parse dates if provided
+        parsed_date_from = None
+        parsed_date_to = None
+        
+        if date_from:
+            try:
+                parsed_date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'error': 'Invalid date_from format. Use YYYY-MM-DD'}), 400
+        
+        if date_to:
+            try:
+                parsed_date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'error': 'Invalid date_to format. Use YYYY-MM-DD'}), 400
+        
+        # Get history data
+        history = HistoryService.get_analysis_history(
+            page=page,
+            per_page=per_page,
+            risk_level=risk_level,
+            date_from=parsed_date_from,
+            date_to=parsed_date_to
+        )
+        
+        return jsonify(history), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting analysis history: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/statistics', methods=['GET'])
+def get_statistics():
+    """Get overall statistics summary"""
+    try:
+        stats = HistoryService.get_statistics_summary()
+        return jsonify(stats), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting statistics: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/trends', methods=['GET'])
+def get_trend_data():
+    """Get trend data for specified period"""
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        # Limit the period to reasonable values
+        if days < 1 or days > 365:
+            return jsonify({'error': 'Days parameter must be between 1 and 365'}), 400
+        
+        trends = HistoryService.get_trend_data(days=days)
+        return jsonify(trends), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting trend data: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/export', methods=['GET'])
+def export_data():
+    """Export analysis data in CSV or JSON format"""
+    try:
+        format_type = request.args.get('format', 'json').lower()
+        date_from = request.args.get('date_from')
+        date_to = request.args.get('date_to')
+        
+        # Validate format
+        if format_type not in ['json', 'csv']:
+            return jsonify({'error': 'Format must be either json or csv'}), 400
+        
+        # Parse dates if provided
+        parsed_date_from = None
+        parsed_date_to = None
+        
+        if date_from:
+            try:
+                parsed_date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'error': 'Invalid date_from format. Use YYYY-MM-DD'}), 400
+        
+        if date_to:
+            try:
+                parsed_date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'error': 'Invalid date_to format. Use YYYY-MM-DD'}), 400
+        
+        # Export data
+        export_result = HistoryService.export_data(
+            format_type=format_type,
+            date_from=parsed_date_from,
+            date_to=parsed_date_to
+        )
+        
+        if 'error' in export_result:
+            return jsonify({'error': export_result['error']}), 500
+        
+        # Create response with appropriate content type
+        if format_type == 'csv':
+            response = make_response(export_result['data'])
+            response.headers['Content-Type'] = 'text/csv'
+            response.headers['Content-Disposition'] = f'attachment; filename={export_result["filename"]}'
+        else:
+            response = jsonify(export_result['data'])
+            response.headers['Content-Disposition'] = f'attachment; filename={export_result["filename"]}'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error exporting data: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/history/<task_id>', methods=['GET'])
+def get_historical_analysis_detail(task_id):
+    """Get detailed historical analysis result by task ID"""
+    try:
+        result = HistoryService.get_analysis_detail(task_id)
+        
+        if not result:
+            return jsonify({'error': 'Analysis not found'}), 404
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting historical analysis detail: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 @app.errorhandler(413)
 def file_too_large(error):

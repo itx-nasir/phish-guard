@@ -3,6 +3,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import {
   AppBar,
   Box,
+  Button,
   Container,
   Link,
   Toolbar,
@@ -10,6 +11,8 @@ import {
   useTheme,
 } from '@mui/material';
 import SecurityIcon from '@mui/icons-material/Security';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 
 const Layout = ({ children }) => {
   const theme = useTheme();
@@ -22,12 +25,31 @@ const Layout = ({ children }) => {
           <Link
             component={RouterLink}
             to="/"
-            sx={{ textDecoration: 'none', color: 'inherit' }}
+            sx={{ textDecoration: 'none', color: 'inherit', flexGrow: 1 }}
           >
             <Typography variant="h6" component="div">
               PhishGuard
             </Typography>
           </Link>
+          
+          <Button
+            color="inherit"
+            component={RouterLink}
+            to="/"
+            startIcon={<DashboardIcon />}
+            sx={{ mr: 2 }}
+          >
+            Analyze
+          </Button>
+          
+          <Button
+            color="inherit"
+            component={RouterLink}
+            to="/history"
+            startIcon={<AnalyticsIcon />}
+          >
+            History
+          </Button>
         </Toolbar>
       </AppBar>
 
