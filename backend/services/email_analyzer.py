@@ -10,6 +10,7 @@ from typing import Dict, List, Tuple, Any, Optional
 import logging
 import os
 from dataclasses import dataclass
+from .threat_intelligence import ThreatIntelligenceService
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +103,10 @@ class EmailAnalyzer:
                 content_analysis = analyzer._analyze_body(email_message)
                 link_analysis = analyzer._analyze_links(email_message)
                 attachment_analysis = analyzer._analyze_attachments(email_message)
+                
+                # Add threat intelligence analysis
+                threat_intel_analysis = analyzer._analyze_threat_intelligence(email_message)
+                
             except Exception as e:
                 logger.error(f"Error during analysis components: {str(e)}")
                 return {
@@ -116,7 +121,8 @@ class EmailAnalyzer:
                 header_analysis,
                 content_analysis,
                 link_analysis,
-                attachment_analysis
+                attachment_analysis,
+                threat_intel_analysis
             )
             
             result = {
@@ -126,6 +132,7 @@ class EmailAnalyzer:
                 'content_analysis': content_analysis,
                 'link_analysis': link_analysis,
                 'attachment_analysis': attachment_analysis,
+                'threat_intelligence': threat_intel_analysis,
                 'recommendations': analyzer._generate_recommendations(
                     header_analysis,
                     content_analysis,
@@ -326,14 +333,119 @@ class EmailAnalyzer:
         
         return results
 
+    def _analyze_threat_intelligence(self, email_message: email.message.Message) -> Dict[str, Any]:
+        """Analyze email using threat intelligence (VirusTotal)"""
+        results = {
+            'virustotal_url_analysis': [],
+            'virustotal_domain_analysis': [],
+            'virustotal_ip_analysis': [],
+            'virustotal_file_analysis': [],
+            'virustotal_sender_analysis': [],
+            'malicious_indicators': [],
+            'suspicious_indicators': []
+        }
+        
+        try:
+            with ThreatIntelligenceService() as threat_intel:
+                if not threat_intel.enabled:
+                    results['info'] = 'Threat intelligence disabled or API key not configured'
+                    return results
+                
+                # Get email body and headers for analysis
+                body = self._get_email_body(email_message)
+                headers_str = str(email_message)
+                
+                # 1. Extract and analyze URLs from email
+                urls = threat_intel.extract_urls_from_text(body)
+                if urls:
+                    url_analysis = threat_intel.analyze_urls(urls)
+                    results['virustotal_url_analysis'] = url_analysis['url_reports']
+                    results['malicious_indicators'].extend(url_analysis['malicious_urls'])
+                    results['suspicious_indicators'].extend(url_analysis['suspicious_urls'])
+                
+                # 2. Extract and analyze domains
+                domains = threat_intel.extract_domains_from_urls(urls)
+                if domains:
+                    domain_analysis = threat_intel.analyze_domains(domains)
+                    results['virustotal_domain_analysis'] = domain_analysis['domain_reports']
+                    results['malicious_indicators'].extend(domain_analysis['malicious_domains'])
+                    results['suspicious_indicators'].extend(domain_analysis['suspicious_domains'])
+                
+                # 3. Extract and analyze IP addresses from content
+                content_ips = threat_intel.extract_ips_from_text(body)
+                
+                # 4. Extract IPs from email headers (routing information)
+                header_ips = threat_intel.extract_header_ips(headers_str)
+                
+                # Combine all IPs
+                all_ips = list(set(content_ips + header_ips))
+                if all_ips:
+                    ip_analysis = threat_intel.analyze_ips(all_ips)
+                    results['virustotal_ip_analysis'] = ip_analysis['ip_reports']
+                    results['malicious_indicators'].extend(ip_analysis['malicious_ips'])
+                    results['suspicious_indicators'].extend(ip_analysis['suspicious_ips'])
+                
+                # 5. Analyze sender domain
+                sender_domain = threat_intel.extract_sender_domain(email_message.get('From', ''))
+                if sender_domain:
+                    sender_analysis = threat_intel.analyze_domains([sender_domain])
+                    if sender_analysis['domain_reports']:
+                        results['virustotal_sender_analysis'] = sender_analysis['domain_reports']
+                        results['malicious_indicators'].extend(sender_analysis['malicious_domains'])
+                        results['suspicious_indicators'].extend(sender_analysis['suspicious_domains'])
+                
+                # 6. Analyze attachment hashes
+                file_hashes = self._extract_attachment_hashes(email_message, threat_intel)
+                if file_hashes:
+                    file_analysis = threat_intel.analyze_file_hashes(file_hashes)
+                    results['virustotal_file_analysis'] = file_analysis['file_reports']
+                    results['malicious_indicators'].extend(file_analysis['malicious_files'])
+                    results['suspicious_indicators'].extend(file_analysis['suspicious_files'])
+                
+        except Exception as e:
+            logger.error(f"Error in threat intelligence analysis: {str(e)}")
+            results['error'] = f'Threat intelligence analysis failed: {str(e)}'
+        
+        return results
+
+    def _extract_attachment_hashes(self, email_message: email.message.Message, threat_intel) -> List[Dict[str, Any]]:
+        """Extract attachment hashes for VirusTotal analysis"""
+        file_hashes = []
+        
+        try:
+            for part in email_message.walk():
+                if part.get_content_maintype() == 'multipart':
+                    continue
+                    
+                filename = part.get_filename()
+                if filename:
+                    try:
+                        # Get file content
+                        file_data = part.get_payload(decode=True)
+                        if file_data and len(file_data) > 0:
+                            # Compute hash
+                            file_hash = threat_intel.compute_file_hash(file_data)
+                            file_hashes.append({
+                                'filename': filename,
+                                'hash': file_hash,
+                                'size': len(file_data)
+                            })
+                    except Exception as e:
+                        logger.warning(f"Error processing attachment {filename}: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error extracting attachment hashes: {str(e)}")
+        
+        return file_hashes
+
     def _calculate_threat_score(self, *analyses) -> float:
         """Calculate overall threat score based on all analyses"""
         score = 0.0
         weights = {
-            'header': 0.3,
-            'content': 0.2,
-            'link': 0.3,
-            'attachment': 0.2
+            'header': 0.25,
+            'content': 0.15,
+            'link': 0.25,
+            'attachment': 0.15,
+            'threat_intel': 0.20
         }
         
         # Header analysis
@@ -354,6 +466,15 @@ class EmailAnalyzer:
         # Attachment analysis
         if analyses[3]['suspicious_attachments']:
             score += len(analyses[3]['suspicious_attachments']) * weights['attachment']
+        
+        # Threat intelligence analysis (if available)
+        if len(analyses) > 4:
+            threat_intel = analyses[4]
+            if 'malicious_indicators' in threat_intel:
+                # High weight for malicious indicators from threat intelligence
+                score += len(threat_intel['malicious_indicators']) * weights['threat_intel'] * 2
+            if 'suspicious_indicators' in threat_intel:
+                score += len(threat_intel['suspicious_indicators']) * weights['threat_intel']
         
         return min(score, 1.0)  # Normalize to 0-1 range
 
@@ -393,6 +514,18 @@ class EmailAnalyzer:
             recommendations.append(
                 "This email contains potentially dangerous attachments. Do not open them."
             )
+        
+        # Threat intelligence recommendations (if available)
+        if len(analyses) > 4:
+            threat_intel = analyses[4]
+            if threat_intel.get('malicious_indicators'):
+                recommendations.append(
+                    "VirusTotal has flagged URLs, domains, or IPs in this email as malicious. DO NOT interact with this email."
+                )
+            elif threat_intel.get('suspicious_indicators'):
+                recommendations.append(
+                    "VirusTotal has flagged some content in this email as suspicious. Exercise extreme caution."
+                )
         
         if not recommendations:
             recommendations.append("This email appears to be safe, but always remain vigilant.")

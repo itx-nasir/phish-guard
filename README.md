@@ -6,6 +6,7 @@ Advanced email phishing detection system with comprehensive analysis and histori
 
 - **Email Analysis Engine** - Upload `.eml` files or paste email content
 - **Multi-layer Detection** - Analyzes headers, content, links, and attachments
+- **VirusTotal Integration** - Real-time threat intelligence for URLs, domains, and IPs
 - **Threat Scoring** - Returns threat score (0-100%) and risk level (Low/Medium/High)
 - **Background Processing** - Fast response with Celery + Redis
 - **Batch Processing** - Analyze multiple emails simultaneously (up to 10 files)
@@ -32,6 +33,11 @@ The new Historical Analysis Dashboard provides comprehensive insights:
 git clone https://github.com/your-username/phish-guard.git
 cd phish-guard
 cp env.template .env
+
+# Configure VirusTotal API (optional but recommended)
+# Get your free API key from https://www.virustotal.com/gui/join-us
+# Add it to .env: VIRUSTOTAL_API_KEY=your-api-key-here
+
 docker-compose up --build
 ```
 
@@ -92,19 +98,47 @@ curl -X POST \
 - `GET /api/health` - Health check
 - `GET /api/test` - API status test
 
+## 🔧 VirusTotal Integration
+
+PhishGuard now includes real-time threat intelligence via VirusTotal API:
+
+### Setup:
+1. Get a free API key from [VirusTotal](https://www.virustotal.com/gui/join-us)
+2. Add to your `.env` file: `VIRUSTOTAL_API_KEY=your-api-key-here`
+3. Restart the application
+
+### Features:
+- **🔗 URL Analysis** - Checks all URLs found in emails against VirusTotal database
+- **📧 Sender Domain Analysis** - Validates sender domain reputation and history
+- **🌐 IP Address Scanning** - Analyzes IPs from email content AND routing headers
+- **📎 Attachment Hash Analysis** - SHA256 hash checking of all email attachments
+- **🛣️ Email Routing Analysis** - Checks reputation of servers that handled the email
+- **⚡ Real-time Results** - Shows malicious/suspicious indicators in analysis results
+- **🎯 Enhanced Scoring** - Comprehensive threat intelligence improves detection accuracy
+
+### Dashboard Display:
+- **🔴 Malicious Indicators** - Critical threats highlighted in red
+- **🟠 Suspicious Indicators** - Potential threats shown in orange
+- **📊 Detailed Scan Results** - Detection counts from multiple security engines
+- **📧 Sender Analysis** - Domain reputation and creation date
+- **📎 Attachment Reports** - File hash analysis and malware detection
+- **🌐 IP Geolocation** - Country and network owner information
+- **🛣️ Email Path Analysis** - Routing server reputation checks
+
+*Note: VirusTotal integration is optional. The system works without an API key but provides enhanced detection with it.*
+
 ## 🛠️ Tech Stack
 
 - **Backend:** Flask + Celery + Redis + SQLAlchemy
 - **Frontend:** React + Material-UI + Recharts
 - **Database:** SQLite (configurable to PostgreSQL/MySQL)
-- **Analysis:** Pattern matching, domain checking, header validation
+- **Analysis:** Pattern matching, domain checking, header validation, VirusTotal threat intelligence
 - **Charts:** Interactive data visualization with trend analysis
 - **Export:** CSV and JSON data export capabilities
 
 ## 🚀 Planned Features
 
 ### 🔥 High Priority
-- **Advanced Threat Intelligence** - VirusTotal API integration and real-time threat feeds
 - **Email Chain Analysis** - Analyze forwarding patterns and email threads
 - **Custom Rules Engine** - User-defined detection rules and scoring
 

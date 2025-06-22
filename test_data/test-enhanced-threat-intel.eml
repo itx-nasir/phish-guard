@@ -1,0 +1,85 @@
+Return-Path: <phishing@suspicious-domain-2023.tk>
+Delivered-To: victim@company.com
+Received: from smtp.suspicious-domain-2023.tk ([185.220.101.182])
+	by mail.company.com with ESMTP id abc123
+	for <victim@company.com>; Tue, 15 Nov 2023 10:30:45 +0000
+Received: from [10.0.0.1] (unknown [45.142.212.61])
+	by smtp.suspicious-domain-2023.tk (Postfix) with ESMTP id DEF456
+	for <victim@company.com>; Tue, 15 Nov 2023 10:30:40 +0000
+X-Originating-IP: 185.220.101.182
+Authentication-Results: mail.company.com;
+	spf=fail smtp.mailfrom=phishing@suspicious-domain-2023.tk;
+	dkim=fail header.d=suspicious-domain-2023.tk;
+Message-ID: <threat-test-001@suspicious-domain-2023.tk>
+Date: Tue, 15 Nov 2023 10:30:30 +0000
+From: "Bank Security Team" <phishing@suspicious-domain-2023.tk>
+To: victim@company.com
+Subject: URGENT: Account Suspended - Immediate Action Required
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_001_threat_test"
+
+------=_Part_001_threat_test
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Account Verification Required</title>
+</head>
+<body>
+    <h2>URGENT SECURITY ALERT</h2>
+    
+    <p>Dear Customer,</p>
+    
+    <p>Your account has been <strong>temporarily suspended</strong> due to unusual activity detected from IP address 192.168.1.100 and 203.0.113.45.</p>
+    
+    <p>To reactivate your account, please verify your information by clicking the link below:</p>
+    
+    <p><a href="http://secure-bank-verification.tk/login?redirect=malware.tk">Click Here to Verify Account</a></p>
+    
+    <p>You can also visit: https://phishing-test-site.tk/verify or http://bit.ly/suspicious-link</p>
+    
+    <p>If you received this email in error, please contact our security team at security@suspicious-domain-2023.tk</p>
+    
+    <p>Alternative verification link: http://185.220.101.182/verify.php</p>
+    
+    <p><strong>WARNING:</strong> Failure to verify within 24 hours will result in permanent account closure.</p>
+    
+    <p>For additional security, please review the attached security guidelines.</p>
+    
+    <br>
+    <p>Best regards,<br>
+    Security Team<br>
+    Customer Service Department</p>
+</body>
+</html>
+
+------=_Part_001_threat_test
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="security-guidelines.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2Jq
+CjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFsgMyAwIFIgXQovQ291bnQgMQo+PgplbmRv
+YmoKMyAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDIgMCBSCi9NZWRpYUJveCBbIDAgMCA2
+MTIgNzkyIF0KL1Jlc291cmNlcyA8PAovRm9udCA8PAovRjEgNCAwIFIKPj4KPj4KL0NvbnRlbnRz
+IDUgMCBSCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9UeXBlIC9Gb250Ci9TdWJ0eXBlIC9UeXBlMQov
+QmFzZUZvbnQgL0hlbHZldGljYQo+PgplbmRvYmoKNSAwIG9iago8PAovTGVuZ3RoIDQ0Cj4+CnN0
+cmVhbQpCVApxCjcyIDcyMCBUZApCVAovRjEgMTIgVGYKKFRoaXMgaXMgYSB0ZXN0IFBERikgVGoK
+RVQKUQplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAw
+MDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAw
+MDAwMDI0NSAwMDAwMCBuIAowMDAwMDAwMzEyIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNgov
+Um9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNDA1CiUlRU9G
+
+------=_Part_001_threat_test
+Content-Type: application/zip
+Content-Disposition: attachment; filename="account-verification.zip"
+Content-Transfer-Encoding: base64
+
+UEsDBAoAAAAAAKlLKVMAAAAAAAAAAAAAAAAUABwAYWNjb3VudC12ZXJpZmljYXRpb24vVVQJAANh
+S05TYUtOU3V4CwABBOgDAAAE6AMAAFBLAQIVJAJWJC5PAABAAQIDAAwAAAAAAKlLKVMAAAAAAAAA
+AAAAAAEAHABhY2NvdW50LXZlcmlmaWNhdGlvbi9VVAMAA2FLTlNhU01TdXgLAAEE6AMAAAToAwAA
+UFBLBQYAAAAAAQABAGAAAAA2AAAAAAA=
+
+------=_Part_001_threat_test-- 
